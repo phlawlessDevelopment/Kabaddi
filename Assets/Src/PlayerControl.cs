@@ -5,14 +5,19 @@ using UnityEngine;
 public class PlayerControl : MonoBehaviour
 {
     /* A kinematic rigid body player control script */
-
-    public float speed = 10.0f;
+    [SerializeField] private GameObject popupTextPrefab;
+    public float speed = 5.0f;
     public float rotationSpeed = 100.0f;
 
     private Rigidbody rb;
 
     private List<AIControl> tagged = new List<AIControl>();
     private bool bonus = false;
+
+    private bool midLineCrossed = false;
+    private bool bonusLineCrossed = false;
+
+    private ScoreSystem scoreSystem;
 
     enum PlayerState
     {
@@ -26,6 +31,7 @@ public class PlayerControl : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        scoreSystem = GameObject.FindObjectOfType<ScoreSystem>();
     }
 
     // Update is called once per frame
@@ -52,30 +58,9 @@ public class PlayerControl : MonoBehaviour
         return input;
     }
 
-    private void RaidingOnTrigger(){
+    private void RaidingOnTrigger(Collider other){
         
-        if (other.gameObject.CompareTag("Ai Char")){
-            tagged.Add(other.gameObject.GetComponent<AIControl>());
-            state = PlayerState.Struggle;
-        }
-        else if (other.gameObject.CompareTag("Bonus L"))
-        {
-
-        }
         
-        else if (other.gameObject.CompareTag("Mid Line"))
-        {
-
-        }
-        
-        else if (other.gameObject.CompareTag("Baulk L"))
-        {
-
-        }
-        else if (other.gameObject.CompareTag("Bonus R"))
-        {
-
-        }
        
     }
 
@@ -92,39 +77,45 @@ public class PlayerControl : MonoBehaviour
 
     public void OnTriggerEnter(Collider other)
     {   
-        /*
-        Mid L
-        Mid R
-        Baulk L
-        Baulk R
-        Bonus L
-        Bonus R
-        Lobby T
-        Lobby B
-        Mid Line
-        */
-
-        switch (state)
-        {
-            case PlayerState.Raiding:
-                RaidingOnTrigger();
-                break;
-            case PlayerState.Defending:
-                DefendingOnTrigger();
-                break;
-            case PlayerState.Struggle:
-                StruggleOnTrigger();
-                break;
-            case PlayerState.Out:
-                break;
-            default:
-                break;
+        if (midLineCrossed && other.gameObject.CompareTag("Ai Char")){
+            tagged.Add(other.gameObject.GetComponent<AIControl>());
+            state = PlayerState.Struggle;
+            SpawnPopupText("Struggle", Color.red);
         }
+        if (midLineCrossed && other.gameObject.CompareTag("Bonus"))
+        {
+            bonus = true;
+            SpawnPopupText("Bonus line crossed", Color.yellow);
+        }
+        if (!midLineCrossed && other.gameObject.CompareTag("Mid Line"))
+        {
+            midLineCrossed = true;
+            SpawnPopupText("kabaddi...", Color.black);
+        }
+        else if(midLineCrossed && other.gameObject.CompareTag("Mid Line"))
+        {
+            // Todo: count points
+            SpawnPopupText(tagged.Count.ToString() + " points", Color.green);
+            scoreSystem.AddPlayerScore(tagged.Count + (bonusLineCrossed ? 1 : 0));
+            tagged.Clear();
+            midLineCrossed = false;
+            bonusLineCrossed = false;
+        }
+               
+        if (midLineCrossed && other.gameObject.CompareTag("Baulk"))
+        {
 
-       
-        
+        }
+        if (midLineCrossed && other.gameObject.CompareTag("Bonus"))
+        {
 
-        
+        }
+    }
+    private void SpawnPopupText(string text, Color color)
+    {
+        PopupText popupText = Instantiate(popupTextPrefab, transform.position, Quaternion.identity).GetComponent<PopupText>();
+        popupText.SetText(text);
+        popupText.SetColor(color);
     }
 
 }
